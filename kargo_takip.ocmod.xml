@@ -1,0 +1,623 @@
+<modification>
+	<name>Kargo Takip Modülü v2.3</name>
+	<id>KargoTakip</id>
+	
+	<code id='order history and tracking'>Siparis Kargo Takip</code>
+	<author>ugurfirat</author>
+  <version>2.3.x</version>
+
+<file path="admin/controller/sale/order.php">
+		<operation error='log'>
+			<search ><![CDATA[
+				public function index() {
+				]]>
+			</search>
+			<add position="after"><![CDATA[
+				// Begin Track en Trace
+  				$this->checkdb();
+  				// End Track en Trace
+			]]>
+			</add>
+		</operation>
+		<operation error='log'>
+			<search ><![CDATA[
+				$data['text_order'] = sprintf($this->language->get('text_order'), $this->request->get['order_id']);
+			]]></search>
+			<add position="after"><![CDATA[
+			  	// Begin Track en Trace
+				$data['text_notracking'] = $this->language->get('text_notracking');
+				// End Track en Trace
+			]]>
+			</add>
+		</operation>
+		<operation error='log'>
+			<search ><![CDATA[
+				$data['entry_notify'] = $this->language->get('entry_notify');
+			]]></search>
+			<add position="after"><![CDATA[
+			  	// Begin Track en Trace
+				$data['entry_track_trace'] = $this->language->get('entry_track_trace');
+				$data['entry_carrier'] = $this->language->get('entry_carrier');
+				// End Track en Trace
+			]]>
+			</add>
+		</operation>
+		<operation error='log'>
+			<search><![CDATA[
+				public function createInvoiceNo() {
+			]]></search>
+			<add  position="before"><![CDATA[
+			  	// Begin Track en Trace
+				private function checkdb() {
+
+					$tbl = '`' . DB_PREFIX . 'order_history`';
+
+					$col = '`carrier`';
+					$sql = "DESC $tbl $col";
+
+					$query = $this->db->query($sql);
+
+					if (!$query->num_rows) {
+
+						$sql = "alter table $tbl add column `carrier` varchar(15) charset utf8 collate utf8_unicode_ci default '' not null after `notify`";
+
+						$this->db->query($sql);
+					}
+
+					$tbl = '`' . DB_PREFIX . 'order_history`';
+
+					$col = '`trackcode`';
+					$sql = "DESC $tbl $col";
+
+					$query = $this->db->query($sql);
+
+					if (!$query->num_rows) {
+
+						$sql = "alter table $tbl add column `trackcode` varchar(15) charset utf8 collate utf8_unicode_ci default '' not null after `notify`";
+
+						$this->db->query($sql);
+					}
+				}
+				// End Track en Trace
+			]]>
+			</add>
+		</operation>
+		<operation error='log'>
+			<search ><![CDATA[
+				$data['column_comment'] = $this->language->get('column_comment');
+			]]></search>
+			<add position="replace"><![CDATA[
+			  	// Begin Track en Trace
+				$data['column_trackcode'] = $this->language->get('column_trackcode');
+				$data['column_comment'] = $this->language->get('column_comment');
+
+				$data['value_nocarrier'] = $this->language->get('value_nocarrier');
+				$data['value_surat'] = $this->language->get('value_surat');
+				$data['value_mng'] = $this->language->get('value_mng');
+				$data['value_aras'] = $this->language->get('value_aras');
+				$data['value_yurtici'] = $this->language->get('value_yurtici');
+				$data['value_ups'] = $this->language->get('value_ups');
+				$data['value_PTT'] = $this->language->get('value_PTT');
+				
+
+				$data['text_nocarrier'] = $this->language->get('text_nocarrier');
+				$data['text_surat'] = $this->language->get('text_surat');
+				$data['text_mng'] = $this->language->get('text_mng');
+				$data['text_aras'] = $this->language->get('text_aras');
+				$data['text_yurtici'] = $this->language->get('text_yurtici');
+				$data['text_ups'] = $this->language->get('text_ups');
+				$data['text_PTT'] = $this->language->get('text_PTT');
+
+
+				$data['text_notracking'] = $this->language->get('text_notracking');
+				// End Track en Trace
+			]]>
+			</add>
+		</operation>
+    <operation error='log'>
+			    <search><![CDATA[
+					    $results = $this->model_sale_order->getOrderHistories($this->request->get['order_id'], ($page - 1) * 10, 10);
+			    ]]></search>
+			    <add  position="after"><![CDATA[
+			  	    // Track en Trace
+			  	    $order_info = $this->model_sale_order->getOrder($this->request->get['order_id']);
+
+				    $tnt_zipcode = TRIM(substr($order_info['shipping_postcode'], 0, 4) . strtoupper(substr($order_info['shipping_postcode'], -2)));
+
+				
+			    ]]>
+			    </add>
+		    </operation>
+		<operation error='log'>
+			<search><![CDATA[
+				$data['histories'][] = array(
+			]]></search>
+			<add position="before"><![CDATA[
+$trackcode=$result['trackcode'];
+				// Track and Trace
+			  	$trackcode = '' . $result['trackcode'] . '&Postalcode=' . $tnt_zipcode . '&Foreign=false&vind-pakket=Zoek+mijn+pakket';
+
+				if ($result['carrier'] == 'surat') {
+					$trackcode = 'http://www.suratkargo.com.tr/kargoweb/bireysel.aspx?no=' . $result['trackcode'] . '&action=Getir';
+				}
+				else if ($result['carrier'] == 'aras') {
+					$trackcode = 'http://www.araskargo.com.tr/web_18712_1/cargo_tracking_detail.aspx?query=1&querydetail=2&ref_no=&seri_no=&irs_no=&kargo_takip_no=' . $result['trackcode'] . '&atf_no=&customer_code=&integration_code=';
+				}
+				else if ($result['carrier'] == 'mng') {
+					$trackcode = 'http://service.mngkargo.com.tr/iactive/popup/kargotakip.asp?k=' . $result['trackcode'];
+				}
+				else if ($result['carrier'] == 'yurtici') {
+					$trackcode = 'http://selfservis.yurticikargo.com/reports/SSWDocumentDetail.aspx?DocId=' . $result['trackcode'];
+				}
+				else if ($result['carrier'] == 'ups') {
+					$trackcode = 'http://www.ups.com.tr/WaybillSorgu.aspx?Waybill=' . $result['trackcode'];
+				}
+				else if ($result['carrier'] == 'PTT') {
+					$trackcode = 'https://track.aftership.com/ptt-posta/' . $result['trackcode'];
+				}
+			]]>
+			</add>
+		</operation>
+		<operation error='log'>
+			<search ><![CDATA[
+				'status'     => $result['status'],
+			]]></search>
+			<add position="after"><![CDATA[
+				// Track and Trace
+			  	'carrier'	 => $result['carrier'],
+				'tnt_track'  => $result['trackcode'],
+				'trackcode'	 => $result['trackcode'] = $trackcode,
+			]]>
+			</add>
+		</operation>
+</file>
+  
+    <file path="admin/model/sale/order.php">
+		<operation error='log'>
+			<search position="replace" ><![CDATA[
+				$query = $this->db->query("SELECT oh.date_added, os.name AS status, oh.comment, oh.notify FROM " . DB_PREFIX . "order_history oh LEFT JOIN " . DB_PREFIX . "order_status os ON oh.order_status_id = os.order_status_id WHERE oh.order_id = '" . (int)$order_id . "' AND os.language_id = '" . (int)$this->config->get('config_language_id') . "' ORDER BY oh.date_added ASC LIMIT " . (int)$start . "," . (int)$limit);
+			]]>
+			</search>
+			<add><![CDATA[
+				// Begin Track en Trace
+				// Replace this line
+				//$query = $this->db->query("SELECT oh.date_added, os.name AS status, oh.comment, oh.notify FROM " . DB_PREFIX . "order_history oh LEFT JOIN " . DB_PREFIX . "order_status os ON oh.order_status_id = os.order_status_id WHERE oh.order_id = '" . (int)$order_id . "' AND os.language_id = '" . (int)$this->config->get('config_language_id') . "' ORDER BY oh.date_added ASC LIMIT " . (int)$start . "," . (int)$limit);
+
+				$query = $this->db->query("SELECT oh.date_added, os.name AS status, oh.trackcode, oh.carrier, oh.comment, oh.notify FROM " . DB_PREFIX . "order_history oh LEFT JOIN " . DB_PREFIX . "order_status os ON oh.order_status_id = os.order_status_id WHERE oh.order_id = '" . (int)$order_id . "' AND os.language_id = '" . (int)$this->config->get('config_language_id') . "' ORDER BY oh.date_added");
+				// End Track en Trace
+			]]>
+			</add>
+		</operation>
+	</file>
+    <file path="admin/view/template/sale/order_history.tpl">
+    <operation error='log'>
+      <search >
+        <![CDATA[
+				  <td class="text-left"><?php echo $column_status; ?></td>
+			]]>
+      </search>
+      <add position="after">
+        <![CDATA[
+				<!-- Begin Track Trace -->
+				<td class="text-left"><b><?php echo $column_trackcode; ?></td>
+				<!-- End Track en Trace -->
+			]]>
+      </add>
+    </operation>
+    <operation error='log'>
+      <search >
+        <![CDATA[
+				  <td class="text-left"><?php echo $history['status']; ?></td>
+			]]>
+      </search>
+      <add position="after">
+        <![CDATA[
+				<?php if ($history['carrier'] == 'surat') { ?>
+				<td class="left"><img src="view/image/surat.jpg" hspace="3" align="absmiddle" /><a href='<?php echo $history['trackcode']; ?>' target="_blank"><b onmouseover="this.style.color='red'" onmouseout="this.style.color=''"><?php echo $history['tnt_track']; ?></b></a></td>
+				<?php } else if ($history['carrier'] == 'yurtici'){ ?>
+				<td class="left"><img src="view/image/yurtici.jpg" hspace="3" align="absmiddle" /><a href='<?php echo $history['trackcode']; ?>' target="_blank"><b onmouseover="this.style.color='red'" onmouseout="this.style.color=''"><?php echo $history['tnt_track']; ?></b></a></td>
+				<?php } else if ($history['carrier'] == 'ups'){ ?>
+				<td class="left"><img src="view/image/ups.jpg" hspace="3" align="absmiddle" /><a href='<?php echo $history['trackcode']; ?>' target="_blank"><b onmouseover="this.style.color='red'" onmouseout="this.style.color=''"><?php echo $history['tnt_track']; ?></b></a></td>
+				<?php } else if ($history['carrier'] == 'PTT'){ ?>
+				<td class="left"><img src="view/image/PTT.jpg" hspace="3" align="absmiddle" /><a href='<?php echo $history['trackcode']; ?>' target="_blank"><b onmouseover="this.style.color='red'" onmouseout="this.style.color=''"><?php echo $history['tnt_track']; ?></b></a></td>
+				<?php } else if ($history['carrier'] == 'aras'){ ?>
+				<td class="left"><img src="view/image/aras.jpg" hspace="3" align="absmiddle" /><a href='<?php echo $history['trackcode']; ?>' target="_blank"><b onmouseover="this.style.color='red'" onmouseout="this.style.color=''"><?php echo $history['tnt_track']; ?></b></a></td>
+				<?php } else if ($history['carrier'] == 'mng'){ ?>
+				<td class="left"><img src="view/image/mng.jpg" hspace="3" align="absmiddle" /><a href='<?php echo $history['trackcode']; ?>' target="_blank"><b onmouseover="this.style.color='red'" onmouseout="this.style.color=''"><?php echo $history['tnt_track']; ?></b></a></td>
+				<?php } else { ?><td class="left"><span class="help"><?php echo $text_notracking; ?></span></td>
+				<?php } ?>
+			]]>
+      </add>
+    </operation>
+  </file>
+  <file path="admin/view/template/sale/order_info.tpl">
+    <operation error='log'>
+      <search >
+        <![CDATA[
+				<option value="<?php echo $order_statuses['order_status_id']; ?>"><?php echo $order_statuses['name']; ?></option>
+			]]>
+      </search>
+      <add position="after" offset="5" >
+        <![CDATA[
+<div class='form-group'>
+		           <label class="col-sm-2 control-label"><?php echo $entry_carrier; ?></label>
+		            <div class="col-sm-10">		            <select name="carrier" >
+		              <option value="" selected="selected"><span class="help">-Seciniz-</span></option>
+		              <option value="surat">Sürat Kargo</option>
+					  <option value="mng">MNG Kargo</option>
+					  <option value="aras">Aras Kargo</option>
+					  <option value="yurtici">Yurtiçi Kargo</option>
+					  <option value="ups">UPS Kargo</option>
+					  <option value="PTT">PTT Kargo .</option>
+					  </select></div>
+		          </div>
+		     
+		          <div class='form-group'>
+		             <label class="col-sm-2 control-label" for="trackcode"><?php echo $entry_track_trace; ?></label>
+		             <div class="col-sm-10">	<input name="trackcode" id='trackcode' type="text" /></div>
+		          </div>
+				<!-- end entry Track and Trace -->
+			]]>
+      </add>
+    </operation>
+    <operation error='log'>
+      <search >
+        <![CDATA[
+        data: 'order_status_id=' + encodeURIComponent($('select[name=\'order_status_id\']').val()) + '&notify=' + ($('input[name=\'notify\']').prop('checked') ? 1 : 0) + '&override=' + ($('input[name=\'override\']').prop('checked') ? 1 : 0) + '&append=' + ($('input[name=\'append\']').prop('checked') ? 1 : 0) + '&comment=' + encodeURIComponent($('textarea[name=\'comment\']').val()),
+			]]>
+      </search>
+      <add position="replace">
+        <![CDATA[
+				data: 'order_status_id=' + encodeURIComponent($('select[name=\'order_status_id\']').val()) + '&notify=' + ($('input[name=\'notify\']').prop('checked') ? 1 : 0) + '&append=' + ($('input[name=\'append\']').prop('checked') ? 1 : 0) +  '&carrier=' + encodeURIComponent($('select[name=\'carrier\']').val()) + '&trackcode=' + encodeURIComponent($('input[name=\'trackcode\']').val()) + '&comment=' + encodeURIComponent($('textarea[name=\'comment\']').val()),
+			]]>
+      </add>
+    </operation>
+    <operation error='log'>
+      <search >
+        <![CDATA[$('#history').after(html);]]>
+      </search>
+      <add position="after" offset="5">
+        <![CDATA[
+		        $('#carrier').html($('select[name=\'carrier\'] option:selected').text());
+			]]>
+      </add>
+    </operation>
+  </file>
+  
+    <file path="admin/language/*/sale/order.php">
+    <operation error='log'>
+      <search>
+        <![CDATA[	<?php
+			]]>
+      </search>
+      <add position="after">
+        <![CDATA[
+				// Begin Track en Trace
+				$_['column_trackcode']   = 'Takip Kodu';
+				$_['entry_track_trace']  = 'Takip Kodu';
+				$_['entry_carrier']      = 'Kargo Firmasi';
+				$_['text_surat']         = 'Sürat Kargo';
+				$_['text_aras']          = 'Aras Kargo';
+				$_['text_mng']           = 'MNG Kargo';
+				$_['text_yurtici']       = 'Yurtiçi Kargo';
+				$_['text_ups']           = 'UPS Kargo';
+				$_['text_PTT']           = 'PTT Kargo';
+				$_['text_track_trace']   = 'Kargo Takip Linkiniz:';
+				$_['text_notracking']    = '-Takip Kodu Eklenmedi-';
+				// End Track en Trace
+
+			]]>
+      </add>
+    </operation>
+  </file>
+    <file path="admin/language/*/mail/order.php">
+    <operation error='log'>
+      <search>
+        <![CDATA[<?php
+			]]>
+      </search>
+      <add  position="after">
+        <![CDATA[
+				// Begin Track en Trace
+				$_['text_track_trace']  = 'Kargo Takip Linkiniz:';
+				// End Track en Trace
+			]]>
+      </add>
+    </operation>
+  </file>
+  
+<file path='catalog/model/checkout/order.php'>
+    <operation error='log'>
+		    <search><![CDATA[public function addOrderHistory($order_id, $order_status_id, $comment = '', $notify = false, $override = false) {]]>
+			    </search>
+			    <add  position="replace">
+            <![CDATA[
+				    public function addOrderHistory($order_id, $order_status_id, $comment = '', $notify = false,$post=array()) {
+			    ]]>
+			    </add>
+		    </operation>
+    <operation error='log'>
+			    <search ><![CDATA[if (!$order_info['order_status_id'] && $order_status_id) {]]>
+			    </search>
+			    <add position="replace"><![CDATA[
+			
+			    if ((!$order_info['order_status_id'] && $order_status_id) || (isset($post['trackcode']) && $post['trackcode']!='')) {
+			    ]]>
+			    </add>
+		    </operation>
+    <operation error='log'>
+			    <search ><![CDATA[$this->db->query("INSERT INTO " . DB_PREFIX . "order_history SET order_id = '" . (int)$order_id . "', order_status_id = '" . (int)$order_status_id . "', notify = '" . (int)$notify . "', comment = '" . $this->db->escape($comment) . "', date_added = NOW()");]]>
+			    </search>
+			    <add position="replace"><![CDATA[
+			
+			     if(!isset($post['carrier']))
+			     {
+			     $post['carrier']='';
+			 
+			     $post['trackcode']='';
+			 
+			     }
+			     $trackcode=$this->db->escape(strip_tags($post['trackcode']));
+			     $carrier=$this->db->escape($post['carrier']);
+		    $this->db->query("INSERT INTO " . DB_PREFIX . "order_history SET order_id = '" . (int)$order_id . "', order_status_id = '" . (int)$order_status_id . "', notify = '" . (int)$notify . "', comment = '" . $this->db->escape($comment) . "', `carrier`='$carrier', `trackcode`='$trackcode',date_added = NOW()");	 
+			    ]]>
+			    </add>
+		    </operation>
+		<operation error='log'>
+			<search index='0'><![CDATA[
+				if ($comment && $notify) {
+			]]>
+			</search>
+			<add position="before" ><![CDATA[
+				// Begin Track en Trace
+	      		if (isset($post['trackcode']) && $post['trackcode']!='') {
+	      			$tnt_zipcode = TRIM(substr($order_info['shipping_postcode'], 0, 4) . strtoupper(substr($order_info['shipping_postcode'], -2)));
+	      			$data['text_track_trace']= $language->get('text_track_trace') . "\n";
+	      				if ($post['carrier'] == 'surat') {
+	      					$data['track']= html_entity_decode('http://www.suratkargo.com.tr/kargoweb/bireysel.aspx?no=' . $post['trackcode'] . '&action=Getir' , ENT_QUOTES, 'UTF-8') . "\n\n";
+	      				}
+	      				else if ($post['carrier'] == 'aras') {
+	      					$data['track']= html_entity_decode('http://www.araskargo.com.tr/web_18712_1/cargo_tracking_detail.aspx?query=1&querydetail=2&ref_no=&seri_no=&irs_no=&kargo_takip_no=' . $post['trackcode'] . '&atf_no=&customer_code=&integration_code=' , ENT_QUOTES, 'UTF-8') . "\n\n";
+	      				}
+						else if ($post['carrier'] == 'mng') {
+	      					$data['track']= html_entity_decode('http://service.mngkargo.com.tr/iactive/popup/kargotakip.asp?k=' . $post['trackcode'], ENT_QUOTES, 'UTF-8') . "\n\n";
+	      				}
+	      				else if ($post['carrier'] == 'yurtici') {
+	      					$data['track']= html_entity_decode('http://selfservis.yurticikargo.com/reports/SSWDocumentDetail.aspx?DocId=' . $post['trackcode'], ENT_QUOTES, 'UTF-8') . "\n\n";
+	      				}
+						else if ($post['carrier'] == 'ups') {
+	      					$data['track']= html_entity_decode('http://www.ups.com.tr/WaybillSorgu.aspx?Waybill=' . $post['trackcode'], ENT_QUOTES, 'UTF-8') . "\n\n";
+	      				}
+						else if ($post['carrier'] == 'PTT') {
+	      					$data['track']= html_entity_decode('https://track.aftership.com/ptt-posta/' . $post['trackcode'], ENT_QUOTES, 'UTF-8') . "\n\n";
+	      				}
+
+					}
+	      		// End Track en Trace
+			]]>
+			</add>
+		</operation>
+</file>
+  
+<file path='catalog/view/theme/*/template/mail/order.tpl'>
+    <operation error='log'>
+      <search >
+        <![CDATA[<?php if ($comment) { ?>]]>
+      </search>
+      <add position="before">
+        <![CDATA[
+			        <?php 
+			        if(isset($track)):
+			
+			        ?>
+			        <table style="border-collapse: collapse; width: 100%; border-top: 1px solid #DDDDDD; border-left: 1px solid #DDDDDD; margin-bottom: 20px;">
+            <thead>
+              <tr>
+                <td style="font-size: 12px; border-right: 1px solid #DDDDDD; border-bottom: 1px solid #DDDDDD; background-color: #EFEFEF; font-weight: bold; text-align: left; padding: 7px; color: #222222;"><?php echo $text_track_trace; ?></td>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-size: 12px;	border-right: 1px solid #DDDDDD; border-bottom: 1px solid #DDDDDD; text-align: left; padding: 7px;"><?php echo $track; ?></td>
+              </tr>
+            </tbody>
+          </table>
+			
+			        <?php 
+			
+			        endif;
+			        ?>
+			        ]]>
+      </add>
+    </operation>
+  </file>
+  
+<file path="catalog/controller/account/order.php">
+		<operation error='log'>
+			<search ><![CDATA[
+				if ($order_info['invoice_no']) {
+			]]>
+			</search>
+			<add position="before"><![CDATA[
+				// Begin Track en Trace
+				$data['column_track_trace'] = $this->language->get('column_track_trace');
+				$data['text_no_tracking'] = $this->language->get('text_no_tracking');
+				$tnt_zipcode = TRIM(substr($order_info['shipping_postcode'], 0, 4) . strtoupper(substr($order_info['shipping_postcode'], -2)));
+			]]>
+			</add>
+		</operation>
+		<operation error='log'>
+			<search  index="1"><![CDATA['status'     => $result['status'],
+			]]></search>
+			<add position="after" ><![CDATA[
+					'carrier'	 => $result['carrier'],
+					'tnt_track'  => $result['trackcode'],
+					'trackcode'	 => $result['trackcode'] = $trackcode,
+
+			]]>
+			</add>
+		</operation>
+		<operation error='log'>
+			<search index='1'   ><![CDATA[foreach ($results as $result) {]]></search>
+			<add position='after' ><![CDATA[
+				$trackcode=$result['trackcode'];
+				if ($order_info['shipping_country'] == "Türkiye") {
+				$trackcode = '' . $result['trackcode'] . '&Postalcode=' . $tnt_zipcode . '&Foreign=false&vind-pakket=Zoek+mijn+pakket';
+
+				if ($result['carrier'] == 'surat') {
+					$trackcode = 'http://www.suratkargo.com.tr/kargoweb/bireysel.aspx?no=' . $result['trackcode'] . '&action=Getir';
+				}
+				else if ($result['carrier'] == 'aras') {
+					$trackcode = 'http://www.araskargo.com.tr/web_18712_1/cargo_tracking_detail.aspx?query=1&querydetail=2&ref_no=&seri_no=&irs_no=&kargo_takip_no=' . $result['trackcode'] . '&atf_no=&customer_code=&integration_code=';
+				}
+				else if ($result['carrier'] == 'mng') {
+					$trackcode = 'http://service.mngkargo.com.tr/iactive/popup/kargotakip.asp?k=' . $result['trackcode'];
+				}
+				else if ($result['carrier'] == 'yurtici') {
+					$trackcode = 'http://selfservis.yurticikargo.com/reports/SSWDocumentDetail.aspx?DocId=' . $result['trackcode'];
+				}
+				else if ($result['carrier'] == 'ups') {
+					$trackcode = 'http://www.ups.com.tr/WaybillSorgu.aspx?Waybill=' . $result['trackcode'];
+				}
+				else if ($result['carrier'] == 'PTT') {
+					$trackcode = 'https://track.aftership.com/ptt-posta/' . $result['trackcode'];
+				}
+			}
+				
+				// End Track en Trace
+
+			]]>
+			</add>
+		</operation>
+		<operation error='log'>
+			<search ><![CDATA[
+				$data['continue'] = $this->url->link('account/order', '', true);
+			]]></search>
+			<add position="before" index="1"><![CDATA[
+					//}
+
+			]]>
+			</add>
+		</operation>
+	</file>
+
+<file path="catalog/model/account/order.php">
+    <operation error='log'>
+      <search >
+        <![CDATA[
+				$query = $this->db->query("SELECT date_added, os.name AS status, oh.comment, oh.notify FROM " . DB_PREFIX . "order_history oh LEFT JOIN " . DB_PREFIX . "order_status os ON oh.order_status_id = os.order_status_id WHERE oh.order_id = '" . (int)$order_id . "' AND os.language_id = '" . (int)$this->config->get('config_language_id') . "' ORDER BY oh.date_added");
+			]]>
+      </search>
+      <add position="replace">
+        <![CDATA[
+				// Begin Track en Trace
+				$query = $this->db->query("SELECT date_added, os.name AS status, oh.comment, oh.trackcode, oh.carrier, oh.notify FROM " . DB_PREFIX . "order_history oh LEFT JOIN " . DB_PREFIX . "order_status os ON oh.order_status_id = os.order_status_id WHERE oh.order_id = '" . (int)$order_id . "'  AND os.language_id = '" . (int)$this->config->get('config_language_id') . "' ORDER BY oh.date_added DESC");
+				// End Track en Trace
+			]]>
+      </add>
+    </operation>
+  </file>
+
+<file path="catalog/view/theme/*/template/account/order_info.tpl">
+    <operation error='log'>
+      <search>
+        <![CDATA[
+        	<td class="text-left"><?php echo $column_status; ?></td>
+			]]>
+      </search>
+      <add  position="after">
+        <![CDATA[
+				<!-- Begin track and trace -->
+				<td class="text-left"><?php echo $column_track_trace; ?></td>
+			]]>
+      </add>
+    </operation>
+    <operation error='log'>
+      <search >
+        <![CDATA[
+        		<td class="text-left"><?php echo $history['status']; ?></td>
+			]]>
+      </search>
+      <add position="after">
+        <![CDATA[
+		        <?php if ($history['carrier'] == 'surat') { ?>
+		        <td class="text-left"><img src="catalog/view/theme/default/image/surat.jpg" hspace="3" align="absmiddle" /><?php echo $history['trackcode']; ?></b></td><?php } ?>
+		        <?php if ($history['carrier'] == 'aras') { ?>
+		        <td class="text-left"><img src="catalog/view/theme/default/image/aras.jpg" hspace="3" align="absmiddle" /><?php echo $history['trackcode']; ?></b></td><?php } ?>
+				<?php if ($history['carrier'] == 'ups') { ?>
+		        <td class="text-left"><img src="catalog/view/theme/default/image/ups.jpg" hspace="3" align="absmiddle" /><?php echo $history['trackcode']; ?></b></td><?php } ?>
+				<?php if ($history['carrier'] == 'PTT') { ?>
+		        <td class="text-left"<img src="catalog/view/theme/default/image/PTT.jpg" hspace="3" align="absmiddle" /><?php echo $history['trackcode']; ?></b></td><?php } ?>
+				<?php if ($history['carrier'] == 'mng') { ?>
+		        <td class="text-left"><img src="catalog/view/theme/default/image/mng.jpg" hspace="3" align="absmiddle" /><?php echo $history['trackcode']; ?></b></td><?php } ?>
+				<?php if ($history['carrier'] == 'yurtici') { ?>
+		        <td class="text-left"><img src="catalog/view/theme/default/image/yurtici.jpg" hspace="3" align="absmiddle" /><?php echo $history['trackcode']; ?></b></td><?php } ?>
+		        <?php if (!$history['tnt_track']) { ?>
+		        <td class="text-left"><!--<img src="image/data/PostNL_logo_small.gif" hspace="3" align="absmiddle" /><a href='<?php echo $history['trackcode']; ?>' target="_blank"><b onmouseover="this.style.color='red'" onmouseout="this.style.color=''"><?php echo $history['tnt_track']; ?> --><span class="help"><?php echo $text_no_tracking; ?></span></b></a></td>
+				<?php } ?>
+  			]]>
+      </add>
+    </operation>
+  </file>
+
+<file path='catalog/controller/api/order.php'>
+    <operation error='log'>
+      <search position="replace">
+        <![CDATA[	$this->model_checkout_order->addOrderHistory($order_id, $this->request->post['order_status_id'], $this->request->post['comment'], $this->request->post['notify'], $this->request->post['override']);]]>
+      </search>
+      <add>
+        <![CDATA[
+			    $post=$this->request->post;
+			     if(!isset($post['carrier']))
+			     {
+			     $post['carrier']='';
+			 
+			     $post['trackcode']='';
+			 
+			     }
+				    $this->model_checkout_order->addOrderHistory($order_id, $this->request->post['order_status_id'], $this->request->post['comment'], $this->request->post['notify'],$post);
+			    ]]>
+      </add>
+    </operation>
+  </file>
+  
+<file path="catalog/language/*/account/order.php">
+		<operation error='log'>
+			<search><![CDATA[
+				$_['column_comment']
+			]]>
+			</search>
+			<add  position="after"><![CDATA[
+				// Begin Track en Trace
+				$_['entry_carrier']         = 'Kargo Firması';
+				$_['text_surat']          = 'Sürat Kargo';
+				$_['text_mng']          = 'MNG Kargo';
+				$_['text_yurtici']          = 'Yurtiçi Kargo';
+				$_['text_aras']          = 'Aras Kargo';
+				$_['text_ups']          = 'UPS Kargo';
+				$_['text_PTT']          = 'PTT Kargo';
+				$_['text_no_tracking']      = '-Takip Kodu Eklenmedi-';
+				$_['column_track_trace']    = 'Takip Kodu';
+				// End Track en Trace
+			]]>
+			</add>
+		</operation>
+	</file>
+
+<file path="catalog/language/*/mail/order.php">
+    <operation error='log'>
+      <search >
+        <![CDATA[	<?php
+			]]>
+      </search>
+      <add position="after" offset='5'>
+        <![CDATA[
+				// Begin Track en Trace
+				$_['text_track_trace']  = 'Kargo Takip Linkiniz:';
+				// End Track en Trace
+			]]>
+      </add>
+    </operation>
+  </file>
+
+</modification>
